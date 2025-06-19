@@ -6,21 +6,20 @@ export function cleanEssayPrompt(text) {
   
   function processBlock(blockLines) {
     const isQuestionBlock = blockLines[0] && /^\d+\./.test(blockLines[0]);
+    // Detect if this is a multi-option block (contains more than one 'Option N')
+    const optionCount = blockLines.filter(line => /^Option ?\d+[:]?/.test(line)).length;
+    const isMultiOption = optionCount > 1;
     
     // Remove standalone 'Option N' lines
     let cleaned = [];
     for (let i = 0; i < blockLines.length; i++) {
       const line = blockLines[i];
-      
-      if (/^Option ?\d+[:]?\s*$/.test(line)) {
-        // Skip standalone option lines and following empty lines
+      if (/^Option ?\d+[:]??\s*$/.test(line)) {
         while (i + 1 < blockLines.length && !blockLines[i + 1].trim()) i++;
         continue;
       }
-      
       cleaned.push(line);
     }
-    
     // Remove duplicate content (first occurrence of lines that appear later)
     let final = [];
     for (let i = 0; i < cleaned.length; i++) {
@@ -29,8 +28,6 @@ export function cleanEssayPrompt(text) {
         final.push(line);
         continue;
       }
-      
-      // Skip if this line appears later as substring
       let foundLater = false;
       for (let j = i + 1; j < cleaned.length; j++) {
         if (cleaned[j].includes(line)) {
@@ -38,37 +35,68 @@ export function cleanEssayPrompt(text) {
           break;
         }
       }
-      
       if (!foundLater) final.push(line);
     }
-    
-    // Format multi-option questions
+    // Format multi-option questions only
     let formatted = [];
-    for (const line of final) {
-      const optionMatch = line.match(/^(Option ?\d+)(.+)/);
-      
-      if (optionMatch) {
-        formatted.push(optionMatch[1] + ":");
-        formatted.push(optionMatch[2].trim());
+    if (isMultiOption) {
+      // For multi-option: split into option blocks, move Limit/Your Response to end of each
+      let optionBlocks = [];
+      let currentOpt = [];
+      for (let i = 0; i < final.length; i++) {
+        const line = final[i];
+        if (/^Option ?\d+[:]?/.test(line) && currentOpt.length) {
+          optionBlocks.push(currentOpt);
+          currentOpt = [];
+        }
+        currentOpt.push(line);
+      }
+      if (currentOpt.length) optionBlocks.push(currentOpt);
+      for (let block of optionBlocks) {
+        // Move Limit/Your Response to end
+        let limitIdx = block.findIndex(l => /^Limit:/.test(l));
+        let responseIdx = block.findIndex(l => /^Your Response:/.test(l));
+        let limitLine = limitIdx !== -1 ? block.splice(limitIdx, 1)[0] : null;
+        let responseLine = responseIdx !== -1 ? block.splice(responseIdx > limitIdx && limitIdx !== -1 ? responseIdx - 1 : responseIdx, 1)[0] : null;
+        // Option heading
+        if (/^Option ?\d+[:]?/.test(block[0])) {
+          formatted.push(block[0].replace(/[:]?$/, ':'));
+          if (block[1] && block[1].trim()) {
+            formatted.push(block[1].trim());
+          }
+          formatted.push("");
+          formatted.push(...block.slice(2));
+        } else {
+          formatted.push(...block);
+        }
+        if (limitLine) formatted.push(limitLine);
+        if (responseLine) {
+          // Add an extra blank line between Limit: and Your Response:
+          if (limitLine) formatted.push("");
+          formatted.push(responseLine, '', '', '');
+        }
+        // Add blank line between options
         formatted.push("");
-      } else {
+      }
+      // Remove trailing blank lines
+      while (formatted.length && !formatted[formatted.length - 1].trim()) formatted.pop();
+    } else {
+      // Single-response: original logic
+      for (const line of final) {
         formatted.push(line);
       }
-    }
-    
-    // Add separator for questions
-    if (isQuestionBlock) {
-      const headingIdx = formatted.findIndex(line => line.trim());
-      if (headingIdx !== -1) {
-        formatted.splice(headingIdx + 1, 0, "--------------------", "");
+      // Add separator for questions
+      if (isQuestionBlock) {
+        const headingIdx = formatted.findIndex(line => line.trim());
+        if (headingIdx !== -1) {
+          formatted.splice(headingIdx + 1, 0, "--------------------", "");
+        }
+      }
+      // Remove trailing empty lines
+      while (formatted.length && !formatted[formatted.length - 1].trim()) {
+        formatted.pop();
       }
     }
-    
-    // Remove trailing empty lines
-    while (formatted.length && !formatted[formatted.length - 1].trim()) {
-      formatted.pop();
-    }
-    
     return formatted;
   }
   
