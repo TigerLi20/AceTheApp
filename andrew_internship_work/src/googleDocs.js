@@ -100,7 +100,7 @@ export async function createCollegeDoc(collegeId, collegeName, essayText, colleg
       if (prompts && prompts.length > 0) {
         finalEssayText = prompts.map((q, i) => `${i + 1}. ${q}`).join("\n\n");
       } else {
-        finalEssayText = `Essay prompts for ${collegeName} (not found)`;
+        finalEssayText = `Essay prompts for ${collegeName} (none found)`;
       }
     }
     // Always clean the essay text before export
