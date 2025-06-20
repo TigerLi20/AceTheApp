@@ -114,10 +114,24 @@ export function cleanEssayPrompt(text) {
   if (current.length) blocks.push(current);
   
   // Process and join
-  return blocks
+  let result = blocks
     .map(processBlock)
     .flat()
     .join("\n")
     .replace(/(-{15,}\s*\n\s*){2,}/g, "--------------------\n\n") // Remove duplicate separators
     .replace(/(Your Response:)/g, '$1\n\n\n'); // Add three line breaks after 'Your Response:'
+
+  // Remove any disclaimers that may have been inserted in the middle (from previous runs or logic)
+  result = result.replace(/IMPORTANT:[\s\S]*?UC Application\).*?(\n|$)/g, '');
+
+  // Add disclaimers at the bottom (plain text, no HTML)
+  const disclaimer = [
+    '\n\n',
+    'IMPORTANT:',
+    '- Not all essay questions are required for every applicant (please check your specific application choices on your college application)',
+    '- Not all necessary essay questions are guaranteed to be present (please reference with supplemental essay requirements on your college application)',
+    '- University of California (UC) application essay questions are not included (please reference the UC Application)'
+  ].join('\n');
+
+  return result.trim() + '\n\n' + disclaimer;
 }
