@@ -103,7 +103,7 @@ async function getEssayQuestionsForCollege(college, userName) {
       }).join("\n");
     return result;
   } else {
-    return `Essay prompts for ${college.name} (not found)`;
+    return `Essay prompts for ${college.name} (none found)`;
   }
 }
 
