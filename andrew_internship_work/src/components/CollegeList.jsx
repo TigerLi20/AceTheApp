@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./CollegeList.css";
 import { Card, CardContent, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
 import { useCollegeList } from "./CollegeProvider";
@@ -863,9 +863,16 @@ export const allColleges = [
     out_state_tuition: 43622,
     undergrad_enrollment: 32100,
     acceptance_rate: 0.81,
-    image: "https://www.usnews.com/dims4/USNEWS/e281b91/17177859217/resize/800x540%3E/quality/85/?url=https%3A%2F%2Fwww.usnews.com%2Fcmsmedia%2Fb7%2F029f7721431e45fe47d6a961289c63%2FCUBouder_Campuslife1.JPG",
+    image: "https://www.usnews.com/dims4/USNEWS/e281b91/17177859217/resize/800x540%3E/quality/85/?url=https%3A%2F%2Fwww.usnews.com%2Fcmsmedia%2Fb7%2F029f7721431e45fe47d6a961289c63%2FCUBoulder_Campuslife1.JPG",
     description: "A flagship public university with leading programs in aerospace engineering, environmental science, physics, and business."
 },
+];
+
+const TASKS = [
+  { key: "questions", label: "College Questions (non-writing)", weight: 0.3 },
+  { key: "writing", label: "Writing", weight: 0.4 },
+  { key: "recommenders", label: "Recommenders (and FERPA)", weight: 0.2 },
+  { key: "review", label: "Review & Submit", weight: 0.1 },
 ];
 
 function getRandomProgress() {
@@ -877,6 +884,9 @@ export default function CollegeList() {
   const { myColleges, removeCollege } = useCollegeList();
   const [selected, setSelected] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dropdownOpenId, setDropdownOpenId] = useState(null);
+  const [taskStates, setTaskStates] = useState({}); // { collegeId: { questions: true, ... } }
+  const dropdownRef = useRef(null);
 
   const collegesWithProgress = myColleges.map((c) => ({
     ...c,
@@ -911,6 +921,65 @@ export default function CollegeList() {
   const selectedColleges = collegesWithProgress.filter((c) => selected.includes(c.id));
   const selectedNames = selectedColleges.map((c) => c.name).join(", ");
 
+  // Initialize task states for new colleges
+  useEffect(() => {
+    setTaskStates((prev) => {
+      const updated = { ...prev };
+      collegesWithProgress.forEach((c) => {
+        if (!updated[c.id]) {
+          updated[c.id] = {
+            questions: false,
+            writing: false,
+            recommenders: false,
+            review: false,
+          };
+        }
+      });
+      return updated;
+    });
+  }, [myColleges]);
+
+  // Calculate progress based on checked tasks
+  function getProgress(college) {
+    const tasks = taskStates[college.id] || {};
+    let progress = 0;
+    TASKS.forEach((t) => {
+      if (tasks[t.key]) progress += t.weight;
+    });
+    return Math.round(progress * 100);
+  }
+
+  // Handle double click to toggle dropdown
+  const handleCardDoubleClick = (collegeId) => {
+    setDropdownOpenId((prev) => (prev === collegeId ? null : collegeId));
+  };
+
+  // Handle task checkbox change
+  const handleTaskChange = (collegeId, key) => {
+    setTaskStates((prev) => ({
+      ...prev,
+      [collegeId]: {
+        ...prev[collegeId],
+        [key]: !prev[collegeId][key],
+      },
+    }));
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        dropdownOpenId &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
+        setDropdownOpenId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownOpenId]);
+
   return (
     <div className="college-list-page">
       <h1>My College List</h1>
@@ -918,42 +987,88 @@ export default function CollegeList() {
         {collegesWithProgress.length === 0 ? (
           <div className="empty-list-msg">No colleges added yet.</div>
         ) : (
-          collegesWithProgress.map((college) => (
-            <Card
-              className={`mui-college-card${college.progress === 100 ? " completed-college-card" : ""} ${selected.includes(college.id) ? "selected-college-card" : ""}`}
-              key={college.id}
-              onClick={() => handleSelect(college.id)}
-              style={{ position: "relative" }}
-            >
-              <div
-                className="college-card-image-top"
-                style={{
-                  backgroundImage: `url(${getCollegeImage(college)})`,
-                }}
-              >
-                <Typography variant="h6" className="mui-college-name college-card-title-overlay">
-                  {college.name}
-                </Typography>
-              </div>
-              <CardContent>
-                <Typography color="textSecondary" className="mui-college-location">
-                  {college.location}
-                </Typography>
-                <Typography className="mui-college-description">
-                  {college.description}
-                </Typography>
-                <div className="mui-progress-bar">
-                  <div className="custom-progress-container">
-                    <div
-                      className="custom-progress-bar"
-                      style={{ width: `${college.progress}%` }}
-                    ></div>
+          collegesWithProgress.map((college) => {
+            const progress = getProgress(college);
+            return (
+              <div key={college.id} style={{ position: "relative" }}>
+                <Card
+                  className={`mui-college-card${progress === 100 ? " completed-college-card" : ""} ${selected.includes(college.id) ? "selected-college-card" : ""}`}
+                  onClick={() => handleSelect(college.id)}
+                  onDoubleClick={() => handleCardDoubleClick(college.id)}
+                  style={{ position: "relative", zIndex: dropdownOpenId === college.id ? 10 : 1 }}
+                >
+                  <div
+                    className="college-card-image-top"
+                    style={{
+                      backgroundImage: `url(${getCollegeImage(college)})`,
+                    }}
+                  >
+                    <Typography variant="h6" className="mui-college-name college-card-title-overlay">
+                      {college.name}
+                    </Typography>
                   </div>
-                  <span className="mui-progress-label">{college.progress}%</span>
+                  <CardContent>
+                    <Typography color="textSecondary" className="mui-college-location">
+                      {college.location}
+                    </Typography>
+                    <Typography className="mui-college-description">
+                      {college.description}
+                    </Typography>
+                    <div className="mui-progress-bar">
+                      <div className="custom-progress-container">
+                        <div
+                          className="custom-progress-bar"
+                          style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                      <span className="mui-progress-label">{progress}%</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                {/* Dropdown menu */}
+                <div
+                  ref={dropdownOpenId === college.id ? dropdownRef : null}
+                  className={`college-dropdown-menu${dropdownOpenId === college.id ? " open" : ""}`}
+                  style={{
+                    maxHeight: dropdownOpenId === college.id ? 200 : 0,
+                    opacity: dropdownOpenId === college.id ? 1 : 0,
+                    transition: "max-height 0.3s cubic-bezier(.4,2,.6,1), opacity 0.2s",
+                    overflow: "hidden",
+                    background: "#f9f9f9",
+                    border: "1px solid #ddd",
+                    borderRadius: 8,
+                    boxShadow: dropdownOpenId === college.id ? "0 4px 16px rgba(0,0,0,0.08)" : "none",
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: "100%",
+                    zIndex: 20,
+                    margin: "0 auto",
+                    padding: dropdownOpenId === college.id ? 16 : 0,
+                  }}
+                  onDoubleClick={() => setDropdownOpenId(null)}
+                >
+                  {dropdownOpenId === college.id && (
+                    <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                      {TASKS.map((task) => (
+                        <li key={task.key} style={{ marginBottom: 8, display: "flex", alignItems: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={taskStates[college.id]?.[task.key] || false}
+                            onChange={() => handleTaskChange(college.id, task.key)}
+                            id={`task-${college.id}-${task.key}`}
+                          />
+                          <label htmlFor={`task-${college.id}-${task.key}`} style={{ marginLeft: 8 }}>
+                            {task.label} <span style={{ color: "#888", fontSize: 12 }}>({Math.round(task.weight * 100)}%)</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))
+              </div>
+            );
+          })
         )}
         {/* Remove Button (floating, only enabled if selection) */}
         <button
