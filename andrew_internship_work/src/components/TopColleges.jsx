@@ -5,7 +5,10 @@ import { allColleges } from "./CollegeList";
 import { useCollegeList } from "./CollegeProvider";
 import defaultCollegePic from '../assets/collegepictures/default.jpg'; // fallback image
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 const collegeImageModules = import.meta.glob('../assets/collegepictures/*.jpeg', { eager: true });
 const collegeImages = {};
 Object.entries(collegeImageModules).forEach(([path, mod]) => {
@@ -62,7 +65,11 @@ export default function TopColleges() {
   });
 
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { myColleges, refreshColleges, addCollege } = useCollegeList();
+=======
+  const { myColleges, refreshColleges } = useCollegeList();
+>>>>>>> main
   const alreadyAdded = myColleges.map((c) => c.id);
 
   useEffect(() => {
@@ -181,6 +188,7 @@ export default function TopColleges() {
     );
   };
 
+<<<<<<< HEAD
   const handleAddToList = async () => {
     for (const id of selected) {
       try {
@@ -190,6 +198,13 @@ export default function TopColleges() {
       }
     }
     await refreshColleges();
+=======
+  const handleAddToList = () => {
+    const prev = JSON.parse(localStorage.getItem("myColleges") || "[]");
+    const updated = Array.from(new Set([...prev, ...selected]));
+    localStorage.setItem("myColleges", JSON.stringify(updated));
+    refreshColleges();
+>>>>>>> main
     setSelected([]);
   };
 

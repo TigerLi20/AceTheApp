@@ -1,4 +1,5 @@
 import React from "react";
+<<<<<<< HEAD
 import { useNavigate } from "react-router-dom";
 import "./SettingsMenu.css";
 
@@ -37,12 +38,28 @@ export default function SettingsMenu({ onClose, onOptions, onEditSurvey, onLogou
     <div className="settings-menu-overlay" onClick={onClose}>
       <div className="settings-menu" onClick={e => e.stopPropagation()}>
         <button className="settings-menu-btn" onClick={() => setShowOptions(true)}>
+=======
+import "./SettingsMenu.css";
+
+export default function SettingsMenu({ onClose, onOptions, onEditSurvey, onLogout, onEditAssignments }) {
+  return (
+    <div className="settings-menu-overlay" onClick={onClose}>
+      <div className="settings-menu" onClick={e => e.stopPropagation()}>
+        <button className="settings-menu-btn" onClick={onOptions}>
+>>>>>>> main
           Options
         </button>
         <button className="settings-menu-btn" onClick={onEditSurvey}>
           Edit Survey Responses
         </button>
+<<<<<<< HEAD
         <button className="settings-menu-btn" onClick={onEditAssignments}>
+=======
+        <button
+          className="settings-menu-btn"
+          onClick={onEditAssignments}
+        >
+>>>>>>> main
           Edit Assignment Questions
         </button>
         <button className="settings-menu-btn" onClick={onLogout}>

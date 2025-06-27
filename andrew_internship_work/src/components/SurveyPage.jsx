@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./SurveyPage.css";
+<<<<<<< HEAD
 import { getSurveyAnswers, saveSurveyAnswers, getToken } from "../api";
+=======
+>>>>>>> main
 
 const QUESTIONS = [
   "How likely are you to thrive in a highly competitive academic environment?",
@@ -24,18 +27,30 @@ const OPTIONS = [
   "Very Likely"
 ];
 
+<<<<<<< HEAD
 const LOCAL_STORAGE_KEY = "guestSurveyAnswers";
 
+=======
+>>>>>>> main
 export default function SurveyPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+<<<<<<< HEAD
   const [answers, setAnswers] = useState(Array(QUESTIONS.length).fill(null));
   const [loading, setLoading] = useState(true);
+=======
+  // Load answers from localStorage if available
+  const [answers, setAnswers] = useState(() => {
+    const stored = localStorage.getItem("surveyAnswers");
+    return stored ? JSON.parse(stored) : Array(QUESTIONS.length).fill(null);
+  });
+>>>>>>> main
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [recap, setRecap] = useState(false);
 
+<<<<<<< HEAD
   // Load answers from backend if logged in, else from localStorage
   useEffect(() => {
     if (getToken()) {
@@ -60,6 +75,8 @@ export default function SurveyPage() {
     }
   }, []);
 
+=======
+>>>>>>> main
   // If ?recap=1 is in the URL and answers exist, show recap immediately
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -73,12 +90,17 @@ export default function SurveyPage() {
     }
   }, [location.search, answers]);
 
+<<<<<<< HEAD
   // Save answers to backend if logged in, else to localStorage
   const handleNext = async () => {
+=======
+  const handleNext = () => {
+>>>>>>> main
     if (selected === null) return;
     const updated = [...answers];
     updated[current] = selected;
     setAnswers(updated);
+<<<<<<< HEAD
 
     if (!getToken()) {
       // Save to localStorage for guests
@@ -97,6 +119,9 @@ export default function SurveyPage() {
     } catch (err) {
       alert("Failed to save survey answers. Please try again.");
     }
+=======
+    localStorage.setItem("surveyAnswers", JSON.stringify(updated));
+>>>>>>> main
     setSelected(null);
     if (current < QUESTIONS.length - 1) {
       setCurrent(current + 1);
@@ -105,15 +130,21 @@ export default function SurveyPage() {
     }
   };
 
+<<<<<<< HEAD
   // When user confirms, prompt to create account if not logged in
+=======
+>>>>>>> main
   const handleConfirm = () => {
     navigate("/create-account");
   };
 
+<<<<<<< HEAD
   if (loading) {
     return <div className="survey-outer"><div className="survey-box">Loading...</div></div>;
   }
 
+=======
+>>>>>>> main
   if (recap) {
     return (
       <div className="survey-outer">
@@ -129,6 +160,7 @@ export default function SurveyPage() {
                   </span>
                   <select
                     value={answers[idx] !== null ? answers[idx] : ""}
+<<<<<<< HEAD
                     onChange={async e => {
                       const updated = [...answers];
                       updated[idx] = Number(e.target.value);
@@ -138,6 +170,13 @@ export default function SurveyPage() {
                         return;
                       }
                       await saveSurveyAnswers(updated);
+=======
+                    onChange={e => {
+                      const updated = [...answers];
+                      updated[idx] = Number(e.target.value);
+                      setAnswers(updated);
+                      localStorage.setItem("surveyAnswers", JSON.stringify(updated));
+>>>>>>> main
                     }}
                     className="survey-dropdown"
                   >

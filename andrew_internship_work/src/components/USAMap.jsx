@@ -11,8 +11,11 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
+<<<<<<< HEAD
 import { getUsaMapClickedChain, saveUsaMapClickedChain } from "../api";
 
+=======
+>>>>>>> main
 
 // Efficiently import all mascot PNGs from mascots folder
 const mascotModules = import.meta.glob('../assets/mascots/*.png', { eager: true });
@@ -79,6 +82,10 @@ export default function USAMap() {
 
   // Assign a random mascot to each capital on mount
   const [mascotMap, setMascotMap] = useState({});
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
   useEffect(() => {
     const map = {};
     capitals.forEach(cap => {
@@ -87,6 +94,7 @@ export default function USAMap() {
     setMascotMap(map);
   }, []);
 
+<<<<<<< HEAD
   const [clickedChain, setClickedChain] = useState(['CA']);
   const [loadingChain, setLoadingChain] = useState(true);
 
@@ -105,6 +113,18 @@ export default function USAMap() {
       saveUsaMapClickedChain(clickedChain);
     }
   }, [clickedChain, loadingChain]);
+=======
+  // Load chain from localStorage if present
+  const [clickedChain, setClickedChain] = useState(() => {
+    const saved = localStorage.getItem('usaMapClickedChain');
+    return saved ? JSON.parse(saved) : ['CA'];
+  });
+
+  // Save chain to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('usaMapClickedChain', JSON.stringify(clickedChain));
+  }, [clickedChain]);
+>>>>>>> main
 
   // Animation state for the green line
   const [animProgress, setAnimProgress] = useState(1); // 0=start, 1=done
@@ -153,12 +173,19 @@ export default function USAMap() {
 
   const handlePopupClose = () => setPopup(null);
 
+<<<<<<< HEAD
   const handlePopupProceed = async () => {
     if (popup) {
       if (!clickedChain.includes(popup.id)) {
         const newChain = [...clickedChain, popup.id];
         setClickedChain(newChain);
         await saveUsaMapClickedChain(newChain);
+=======
+  const handlePopupProceed = () => {
+    if (popup) {
+      if (!clickedChain.includes(popup.id)) {
+        setClickedChain([...clickedChain, popup.id]);
+>>>>>>> main
       }
       setPopup(null);
       navigate("/video");

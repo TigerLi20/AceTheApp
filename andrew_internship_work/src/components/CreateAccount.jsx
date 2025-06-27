@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CreateAccount.css";
+<<<<<<< HEAD
 import { register } from "../api"; // <-- Import your API register function
 import { saveSurveyAnswers, getToken } from "../api";
 
 const LOCAL_STORAGE_KEY = "guestSurveyAnswers";
 
 export default function CreateAccount({ setLoggedIn }) {
+=======
+
+export default function CreateAccount() {
+>>>>>>> main
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
@@ -16,9 +21,15 @@ export default function CreateAccount({ setLoggedIn }) {
   });
   const [error, setError] = useState("");
 
+<<<<<<< HEAD
   // Redirect if already authenticated (e.g., token exists)
   useEffect(() => {
     if (localStorage.getItem("token")) {
+=======
+  // Redirect if already registered
+  useEffect(() => {
+    if (localStorage.getItem("registered") === "1") {
+>>>>>>> main
       navigate("/home", { replace: true });
     }
   }, [navigate]);
@@ -28,7 +39,11 @@ export default function CreateAccount({ setLoggedIn }) {
     setError("");
   };
 
+<<<<<<< HEAD
   const handleSubmit = async e => {
+=======
+  const handleSubmit = e => {
+>>>>>>> main
     e.preventDefault();
     if (!form.name || !form.email || !form.password || !form.confirm) {
       setError("Please fill out all fields.");
@@ -38,6 +53,7 @@ export default function CreateAccount({ setLoggedIn }) {
       setError("Passwords do not match.");
       return;
     }
+<<<<<<< HEAD
     try {
       console.log("[DEBUG] Registration form data:", form);
       // Call backend API to register
@@ -92,6 +108,22 @@ export default function CreateAccount({ setLoggedIn }) {
       }
       console.error("[DEBUG] Registration error:", err);
     }
+=======
+    // Save user info (for demo, use localStorage)
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      })
+    );
+    // Mark as registered
+    localStorage.setItem("registered", "1");
+    localStorage.removeItem("usaMapClickedChain");
+    // Go to home page (map)
+    navigate("/home");
+>>>>>>> main
   };
 
   return (

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from "react";
 import "./TopCollegesButton.css";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,16 @@ export default function TopCollegesButton() {
       .finally(() => setLoading(false));
   }, []);
 
+=======
+import React from "react";
+import "./TopCollegesButton.css";
+import { useNavigate } from "react-router-dom";
+
+export default function TopCollegesButton() {
+  const navigate = useNavigate();
+  // Read the clicked chain from localStorage
+  const clickedChain = JSON.parse(localStorage.getItem('usaMapClickedChain') || '[]');
+>>>>>>> main
   const isEnabled = Array.isArray(clickedChain) && clickedChain.length >= 3;
 
   return (
@@ -22,7 +33,11 @@ export default function TopCollegesButton() {
       <button
         className="top-colleges-btn"
         onClick={() => isEnabled && navigate("/top-colleges")}
+<<<<<<< HEAD
         disabled={!isEnabled || loading}
+=======
+        disabled={!isEnabled}
+>>>>>>> main
       >
         Top Colleges
       </button>
