@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./SurveyPage.css";
+import { getSurveyAnswers, saveSurveyAnswers, getToken } from "../api";
 
 const QUESTIONS = [
   "How likely are you to thrive in a highly competitive academic environment?",
@@ -23,18 +24,41 @@ const OPTIONS = [
   "Very Likely"
 ];
 
+const LOCAL_STORAGE_KEY = "guestSurveyAnswers";
+
 export default function SurveyPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Load answers from localStorage if available
-  const [answers, setAnswers] = useState(() => {
-    const stored = localStorage.getItem("surveyAnswers");
-    return stored ? JSON.parse(stored) : Array(QUESTIONS.length).fill(null);
-  });
+  const [answers, setAnswers] = useState(Array(QUESTIONS.length).fill(null));
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [recap, setRecap] = useState(false);
+
+  // Load answers from backend if logged in, else from localStorage
+  useEffect(() => {
+    if (getToken()) {
+      getSurveyAnswers()
+        .then((data) => {
+          if (Array.isArray(data) && data.length === QUESTIONS.length) {
+            setAnswers(data);
+          }
+        })
+        .finally(() => setLoading(false));
+    } else {
+      const local = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (local) {
+        try {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length === QUESTIONS.length) {
+            setAnswers(parsed);
+          }
+        } catch {}
+      }
+      setLoading(false);
+    }
+  }, []);
 
   // If ?recap=1 is in the URL and answers exist, show recap immediately
   useEffect(() => {
@@ -49,12 +73,30 @@ export default function SurveyPage() {
     }
   }, [location.search, answers]);
 
-  const handleNext = () => {
+  // Save answers to backend if logged in, else to localStorage
+  const handleNext = async () => {
     if (selected === null) return;
     const updated = [...answers];
     updated[current] = selected;
     setAnswers(updated);
-    localStorage.setItem("surveyAnswers", JSON.stringify(updated));
+
+    if (!getToken()) {
+      // Save to localStorage for guests
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      setSelected(null);
+      if (current < QUESTIONS.length - 1) {
+        setCurrent(current + 1);
+      } else {
+        setRecap(true);
+      }
+      return;
+    }
+
+    try {
+      await saveSurveyAnswers(updated);
+    } catch (err) {
+      alert("Failed to save survey answers. Please try again.");
+    }
     setSelected(null);
     if (current < QUESTIONS.length - 1) {
       setCurrent(current + 1);
@@ -63,9 +105,14 @@ export default function SurveyPage() {
     }
   };
 
+  // When user confirms, prompt to create account if not logged in
   const handleConfirm = () => {
     navigate("/create-account");
   };
+
+  if (loading) {
+    return <div className="survey-outer"><div className="survey-box">Loading...</div></div>;
+  }
 
   if (recap) {
     return (
@@ -82,11 +129,15 @@ export default function SurveyPage() {
                   </span>
                   <select
                     value={answers[idx] !== null ? answers[idx] : ""}
-                    onChange={e => {
+                    onChange={async e => {
                       const updated = [...answers];
                       updated[idx] = Number(e.target.value);
                       setAnswers(updated);
-                      localStorage.setItem("surveyAnswers", JSON.stringify(updated));
+                      if (!getToken()) {
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+                        return;
+                      }
+                      await saveSurveyAnswers(updated);
                     }}
                     className="survey-dropdown"
                   >

@@ -11,6 +11,8 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
+import { getUsaMapClickedChain, saveUsaMapClickedChain } from "../api";
+
 
 // Efficiently import all mascot PNGs from mascots folder
 const mascotModules = import.meta.glob('../assets/mascots/*.png', { eager: true });
@@ -77,7 +79,6 @@ export default function USAMap() {
 
   // Assign a random mascot to each capital on mount
   const [mascotMap, setMascotMap] = useState({});
-
   useEffect(() => {
     const map = {};
     capitals.forEach(cap => {
@@ -86,16 +87,24 @@ export default function USAMap() {
     setMascotMap(map);
   }, []);
 
-  // Load chain from localStorage if present
-  const [clickedChain, setClickedChain] = useState(() => {
-    const saved = localStorage.getItem('usaMapClickedChain');
-    return saved ? JSON.parse(saved) : ['CA'];
-  });
+  const [clickedChain, setClickedChain] = useState(['CA']);
+  const [loadingChain, setLoadingChain] = useState(true);
 
-  // Save chain to localStorage on change
   useEffect(() => {
-    localStorage.setItem('usaMapClickedChain', JSON.stringify(clickedChain));
-  }, [clickedChain]);
+    getUsaMapClickedChain()
+      .then(chain => {
+        if (Array.isArray(chain) && chain.length > 0) {
+          setClickedChain(chain);
+        }
+      })
+      .finally(() => setLoadingChain(false));
+  }, []);
+
+  useEffect(() => {
+    if (!loadingChain) {
+      saveUsaMapClickedChain(clickedChain);
+    }
+  }, [clickedChain, loadingChain]);
 
   // Animation state for the green line
   const [animProgress, setAnimProgress] = useState(1); // 0=start, 1=done
@@ -144,10 +153,12 @@ export default function USAMap() {
 
   const handlePopupClose = () => setPopup(null);
 
-  const handlePopupProceed = () => {
+  const handlePopupProceed = async () => {
     if (popup) {
       if (!clickedChain.includes(popup.id)) {
-        setClickedChain([...clickedChain, popup.id]);
+        const newChain = [...clickedChain, popup.id];
+        setClickedChain(newChain);
+        await saveUsaMapClickedChain(newChain);
       }
       setPopup(null);
       navigate("/video");

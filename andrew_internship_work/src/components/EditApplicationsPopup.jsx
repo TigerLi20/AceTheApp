@@ -3,6 +3,8 @@ import "./EditApplicationsPopup.css";
 import { useCollegeList } from "./CollegeProvider";
 import { createCollegeDoc, getCollegeDocUrl, getEssayPrompts, checkGoogleDocExists } from "../googleDocs";
 import { cleanEssayPrompt } from "../cleanEssayPrompt";
+import { getUser } from "../api"; // <-- Import the new API function
+import { getCollegeDocs, saveCollegeDoc } from "../api"; // import new API
 
 
 // Fetch real essay prompts from JSON for the selected college
@@ -109,12 +111,23 @@ async function getEssayQuestionsForCollege(college, userName) {
 
 export default function EditApplicationsPopup({ onClose }) {
   const { myColleges } = useCollegeList();
-  // Track which colleges are pulsing (just created)
   const [pulsingColleges, setPulsingColleges] = useState({});
+  const [userName, setUserName] = useState("User");
+  const [collegeDocs, setCollegeDocs] = useState({});
+
+  // Fetch user name on mount
+  React.useEffect(() => {
+    getUser()
+      .then(user => setUserName(user.name || "User"))
+      .catch(() => setUserName("User"));
+    getCollegeDocs()
+      .then(setCollegeDocs)
+      .catch(() => setCollegeDocs({}));
+  }, []);
 
   // Handler for college button click
   const handleCollegeButtonClick = async (college) => {
-    let existingUrl = getCollegeDocUrl(college.id);
+    let existingUrl = collegeDocs[college.id];
     let docExists = false;
     if (existingUrl) {
       try {
@@ -125,21 +138,17 @@ export default function EditApplicationsPopup({ onClose }) {
     }
     if (existingUrl && docExists) {
       window.open(existingUrl, "_blank");
-      // If pulsing, remove pulse after opening
       if (pulsingColleges[college.id]) {
         setPulsingColleges((prev) => ({ ...prev, [college.id]: false }));
       }
       return;
     }
     try {
-      // Get user name from localStorage
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const userName = user.name || "User";
-      // Await the real essay prompts
       const essayText = await getEssayQuestionsForCollege(college, userName);
       const url = await createCollegeDoc(college.id, college.name, essayText, college.slug);
-      window.open(url, "_blank"); // Open the doc immediately after creation
-      // Set this college to pulse
+      await saveCollegeDoc(college.id, url); // Save to backend
+      setCollegeDocs((prev) => ({ ...prev, [college.id]: url }));
+      window.open(url, "_blank");
       setPulsingColleges((prev) => ({ ...prev, [college.id]: true }));
     } catch (err) {
       console.error("Google Docs error:", err);

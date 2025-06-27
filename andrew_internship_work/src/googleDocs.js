@@ -1,7 +1,5 @@
-// Add this to your index.html if not already present:
-// <script src="https://accounts.google.com/gsi/client" async defer></script>
-
 import { cleanEssayPrompt } from "./cleanEssayPrompt";
+import { getUser, getCollegeDocs, saveCollegeDoc } from "./api"; // <-- Import your API helpers
 
 window.addEventListener('unhandledrejection', function(event) {
   console.error('UNHANDLED PROMISE REJECTION:', event.reason);
@@ -48,49 +46,47 @@ export async function gapiSignIn() {
       scope: SCOPES,
       callback: (tokenResponse) => {
         try {
-          console.log("GIS callback called:", tokenResponse);
           if (tokenResponse && tokenResponse.access_token) {
-            try {
-              accessToken = tokenResponse.access_token;
-              console.log("Set accessToken");
-            } catch (e) {
-              console.error("Error setting accessToken:", e);
-            }
-            try {
-              window.gapi.client.setToken({ access_token: accessToken });
-              console.log("Set gapi client token");
-            } catch (e) {
-              console.error("Error setting gapi client token:", e);
-            }
-            try {
-              console.log("About to resolve gapiSignIn promise");
+            accessToken = tokenResponse.access_token;
+            window.gapi.client.setToken({ access_token: accessToken });
+            console.debug("[gapiSignIn] Received access token:", accessToken);
+            // Try to get user info for debugging
+            window.gapi.client.request({
+              path: 'https://www.googleapis.com/oauth2/v3/userinfo'
+            }).then(userinfo => {
+              console.debug("[gapiSignIn] Google user info:", userinfo);
               resolve();
-              console.log("gapiSignIn promise resolved");
-            } catch (e) {
-              console.error("Error in resolve:", e);
-            }
+            }).catch(err => {
+              console.warn("[gapiSignIn] Could not fetch user info:", err);
+              resolve();
+            });
           } else {
-            console.error("No access token in tokenResponse", tokenResponse);
+            console.error("[gapiSignIn] No access token in response:", tokenResponse);
             reject(tokenResponse);
           }
         } catch (err) {
-          console.error("Error in GIS callback:", err);
           reject(err);
         }
       },
     });
-    console.log("Requesting access token...");
     client.requestAccessToken();
-    console.log("requestAccessToken() called");
   });
 }
 
+// Create a Google Doc and save its URL to the backend
 export async function createCollegeDoc(collegeId, collegeName, essayText, collegeSlug) {
   try {
-    // Get user name from localStorage (set at registration)
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userName = user.name || "User";
-    // Compose doc title as requested
+    // Get user name from backend
+    let userName = "User";
+    try {
+      const user = await getUser();
+      // Prefer fullName, then name, then fallback
+      userName = user.fullName || user.name || "User";
+      console.debug("[createCollegeDoc] Using userName:", userName, "from user object:", user);
+    } catch (e) {
+      // fallback to "User"
+      console.warn("[createCollegeDoc] Failed to fetch user name, using fallback 'User'.", e);
+    }
     const docTitle = `${userName} - ${collegeName} 2025 essays`;
 
     // If essayText is not provided, try to fetch from prompts
@@ -103,28 +99,23 @@ export async function createCollegeDoc(collegeId, collegeName, essayText, colleg
         finalEssayText = `Essay prompts for ${collegeName} (none found)`;
       }
     }
-    // Always clean the essay text before export
     finalEssayText = cleanEssayPrompt(finalEssayText);
 
-    console.log('Starting Google Docs creation...');
     await gapiLoad();
-    console.log('gapi loaded');
     await gapiInit();
-    console.log('gapi initialized');
     await gapiSignIn();
-    console.log('gapi signed in');
-
+    if (!accessToken) {
+      throw new Error("Google access token not set. Please sign in to Google.");
+    }
     // 1. Create the doc
-    let createRes, docId;
+    let createRes;
     try {
       createRes = await window.gapi.client.docs.documents.create({ title: docTitle });
-      docId = createRes.result.documentId;
-      console.log('Doc created:', docId);
     } catch (err) {
-      console.error("Error creating Google Doc:", err);
-      alert("Error creating Google Doc: " + (err.message || JSON.stringify(err)));
+      console.error("[createCollegeDoc] Google Docs API create error:", err);
       throw err;
     }
+    let docId = createRes.result.documentId;
 
     // 2. Insert essay questions
     try {
@@ -137,21 +128,16 @@ export async function createCollegeDoc(collegeId, collegeName, essayText, colleg
           }
         }]
       });
-      console.log('Text inserted');
     } catch (err) {
-      console.error("Error inserting text into Google Doc:", err);
-      alert("Error inserting text into Google Doc: " + (err.message || JSON.stringify(err)));
+      console.error("[createCollegeDoc] Google Docs API batchUpdate error:", err);
       throw err;
     }
 
     // 3. Get the doc link
     const docUrl = `https://docs.google.com/document/d/${docId}/edit`;
-    console.log('Doc URL:', docUrl);
 
-    // 4. Store in localStorage
-    const docs = JSON.parse(localStorage.getItem("collegeDocs") || "{}");
-    docs[collegeId] = docUrl;
-    localStorage.setItem("collegeDocs", JSON.stringify(docs));
+    // 4. Save doc URL to backend
+    await saveCollegeDoc(collegeId, docUrl);
 
     return docUrl;
   } catch (err) {
@@ -161,9 +147,14 @@ export async function createCollegeDoc(collegeId, collegeName, essayText, colleg
   }
 }
 
-export function getCollegeDocUrl(collegeId) {
-  const docs = JSON.parse(localStorage.getItem("collegeDocs") || "{}");
-  return docs[collegeId] || null;
+// Get a college doc URL from the backend
+export async function getCollegeDocUrl(collegeId) {
+  try {
+    const docs = await getCollegeDocs();
+    return docs[collegeId] || null;
+  } catch (e) {
+    return null;
+  }
 }
 
 // Fetch essay prompts from the static JSON file in public/

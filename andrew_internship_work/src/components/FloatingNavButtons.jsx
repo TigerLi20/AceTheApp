@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./FloatingNavButtons.css";
 import bookIcon from "../assets/book.svg";
 import gavelIcon from "../assets/gavel.webp";
@@ -7,6 +7,9 @@ import calculatorIcon from "../assets/calculator.png";
 import settingsIcon from "../assets/settings.png";
 import SettingsMenu from "./SettingsMenu";
 import EditApplicationsPopup from "./EditApplicationsPopup";
+import { setToken } from "../api"; // <-- Import setToken to clear token on logout
+import { getSurveyAnswers } from "../api"; // Add this import
+
 
 export default function FloatingNavButtons() {
   const navigate = useNavigate();
@@ -20,12 +23,16 @@ export default function FloatingNavButtons() {
     navigate("/settings");
   };
 
-  const handleEditSurvey = () => {
+  const handleEditSurvey = async () => {
     setShowSettings(false);
-    const answers = JSON.parse(localStorage.getItem("surveyAnswers"));
-    if (Array.isArray(answers) && answers.length === 10 && answers.every(a => a !== null)) {
-      navigate("/survey?recap=1");
-    } else {
+    try {
+      const answers = await getSurveyAnswers();
+      if (Array.isArray(answers) && answers.length === 10 && answers.every(a => a !== null && a !== "")) {
+        navigate("/survey?recap=1");
+      } else {
+        navigate("/survey");
+      }
+    } catch (e) {
       navigate("/survey");
     }
   };
@@ -37,7 +44,7 @@ export default function FloatingNavButtons() {
 
   const handleLogout = () => {
     setShowSettings(false);
-    localStorage.removeItem("registered");
+    setToken(null); // Remove token from localStorage and memory
     window.location.href = "/";
   };
 

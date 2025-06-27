@@ -5,6 +5,7 @@ import { allColleges } from "./CollegeList";
 import { useCollegeList } from "./CollegeProvider";
 import defaultCollegePic from '../assets/collegepictures/default.jpg'; // fallback image
 
+
 const collegeImageModules = import.meta.glob('../assets/collegepictures/*.jpeg', { eager: true });
 const collegeImages = {};
 Object.entries(collegeImageModules).forEach(([path, mod]) => {
@@ -61,7 +62,7 @@ export default function TopColleges() {
   });
 
   const navigate = useNavigate();
-  const { myColleges, refreshColleges } = useCollegeList();
+  const { myColleges, refreshColleges, addCollege } = useCollegeList();
   const alreadyAdded = myColleges.map((c) => c.id);
 
   useEffect(() => {
@@ -180,11 +181,15 @@ export default function TopColleges() {
     );
   };
 
-  const handleAddToList = () => {
-    const prev = JSON.parse(localStorage.getItem("myColleges") || "[]");
-    const updated = Array.from(new Set([...prev, ...selected]));
-    localStorage.setItem("myColleges", JSON.stringify(updated));
-    refreshColleges();
+  const handleAddToList = async () => {
+    for (const id of selected) {
+      try {
+        await addCollege(id); // This now updates context and backend
+      } catch (e) {
+        console.error(`Failed to add college ${id}:`, e);
+      }
+    }
+    await refreshColleges();
     setSelected([]);
   };
 

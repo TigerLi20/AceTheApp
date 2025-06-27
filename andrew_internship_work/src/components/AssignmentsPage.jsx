@@ -1,28 +1,47 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAssignmentAnswers, saveAssignmentAnswers } from "../api";
 import "./VideoPage.css";
 
 export default function AssignmentsPage() {
   const navigate = useNavigate();
-  const [answers, setAnswers] = useState(() => {
-    // Load from localStorage if present
-    const saved = localStorage.getItem("assignmentAnswers");
-    return saved ? JSON.parse(saved) : { q1: "", q2: "", q3: "", q4: "" };
-  });
+  const [answers, setAnswers] = useState({ q1: "", q2: "", q3: "", q4: "" });
+  const [loading, setLoading] = useState(true);
 
-  // Save answers to localStorage whenever they change
+  // Load from API on mount
   useEffect(() => {
-    localStorage.setItem("assignmentAnswers", JSON.stringify(answers));
-  }, [answers]);
+    getAssignmentAnswers()
+      .then(data => {
+        // If data is an array, convert to object
+        if (Array.isArray(data)) {
+          setAnswers({
+            q1: data[0] || "",
+            q2: data[1] || "",
+            q3: data[2] || "",
+            q4: data[3] || ""
+          });
+        } else {
+          setAnswers(data || { q1: "", q2: "", q3: "", q4: "" });
+        }
+      })
+      .catch(() => setAnswers({ q1: "", q2: "", q3: "", q4: "" }))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleChange = (e) => {
     setAnswers({ ...answers, [e.target.name]: e.target.value });
   };
 
-  const handleNext = () => {
-    localStorage.setItem("assignmentAnswers", JSON.stringify(answers));
-    navigate("/video");
+  const handleNext = async () => {
+    try {
+      await saveAssignmentAnswers(answers);
+      navigate("/video");
+    } catch (e) {
+      alert("Failed to save answers. Please try again.");
+    }
   };
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="video-page-bg">
@@ -36,7 +55,7 @@ export default function AssignmentsPage() {
               <input
                 type="text"
                 name="q1"
-                value={answers.q1}
+                value={answers.q1 || ""}
                 onChange={handleChange}
                 style={{ width: "100%", padding: 8, marginTop: 8, borderRadius: 6, border: "1px solid #bbb" }}
                 placeholder="Type your answer here"
@@ -49,7 +68,7 @@ export default function AssignmentsPage() {
               <br />
               <select
                 name="q2"
-                value={answers.q2}
+                value={answers.q2 || ""}
                 onChange={handleChange}
                 style={{ width: "100%", padding: 8, marginTop: 8, borderRadius: 6, border: "1px solid #bbb" }}
               >
@@ -66,7 +85,7 @@ export default function AssignmentsPage() {
               <br />
               <textarea
                 name="q3"
-                value={answers.q3}
+                value={answers.q3 || ""}
                 onChange={handleChange}
                 style={{ width: "100%", padding: 8, marginTop: 8, borderRadius: 6, border: "1px solid #bbb", minHeight: 60 }}
                 placeholder="Type your answer here"
@@ -79,7 +98,7 @@ export default function AssignmentsPage() {
               <br />
               <select
                 name="q4"
-                value={answers.q4}
+                value={answers.q4 || ""}
                 onChange={handleChange}
                 style={{ width: "100%", padding: 8, marginTop: 8, borderRadius: 6, border: "1px solid #bbb" }}
               >

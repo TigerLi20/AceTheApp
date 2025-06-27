@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LandingPage.css";
 import graduationImg from "../assets/graduation.jpeg";
+import { getToken } from "../api"; // <-- Import your API token getter
 
 const studentPhotos = [
   "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=400&q=80", // student with books
@@ -13,6 +14,13 @@ const studentPhotos = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  // Optional: Redirect logged-in users to /home
+  useEffect(() => {
+    if (getToken()) {
+      navigate("/home");
+    }
+  }, [navigate]);
 
   return (
     <div className="landing-root">

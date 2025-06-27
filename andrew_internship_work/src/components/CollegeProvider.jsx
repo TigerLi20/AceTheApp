@@ -1,32 +1,38 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { allColleges } from "../components/CollegeList.jsx";
+import { getColleges, addCollege as apiAddCollege, removeCollege as apiRemoveCollege } from "../api";
 
 const CollegeContext = createContext();
 
 export function CollegeProvider({ children }) {
   const [myColleges, setMyColleges] = useState([]);
 
+  // Load colleges from API on mount
   useEffect(() => {
-    const ids = JSON.parse(localStorage.getItem("myColleges") || "[]");
-    setMyColleges(allColleges.filter((college) => ids.includes(college.id)));
+    refreshColleges();
+    // eslint-disable-next-line
   }, []);
 
-  // Remove a college by id and update localStorage
-  const removeCollege = (id) => {
-    const ids = JSON.parse(localStorage.getItem("myColleges") || "[]");
-    const newIds = ids.filter((collegeId) => collegeId !== id);
-    localStorage.setItem("myColleges", JSON.stringify(newIds));
-    setMyColleges(allColleges.filter((college) => newIds.includes(college.id)));
+  // Add a college by id using the API and refresh
+  const addCollege = async (id) => {
+    await apiAddCollege(id);
+    await refreshColleges();
   };
 
-  // Call this after adding/removing a college
-  const refreshColleges = () => {
-    const ids = JSON.parse(localStorage.getItem("myColleges") || "[]");
+  // Remove a college by id using the API and refresh
+  const removeCollege = async (id) => {
+    await apiRemoveCollege(id);
+    await refreshColleges();
+  };
+
+  // Refresh from API
+  const refreshColleges = async () => {
+    const ids = await getColleges();
     setMyColleges(allColleges.filter((college) => ids.includes(college.id)));
   };
 
   return (
-    <CollegeContext.Provider value={{ myColleges, removeCollege, refreshColleges }}>
+    <CollegeContext.Provider value={{ myColleges, addCollege, removeCollege, refreshColleges }}>
       {children}
     </CollegeContext.Provider>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import USAMap from './components/USAMap';
 import TopCollegesButton from './components/TopCollegesButton';
 import FloatingNavButtons from "./components/FloatingNavButtons";
@@ -17,60 +17,127 @@ import AssignmentsPage from "./components/AssignmentsPage";
 import TopColleges from "./components/TopColleges";
 import CollegeList from "./components/CollegeList";
 import { CollegeProvider } from "./components/CollegeProvider";
-
-
+import { getToken } from "./api";
+import { getProfile } from "./api";
+import UserInfoPage from "./components/UserInfoPage";
 
 
 function App() {
-  // Track registration status
-  const [registered, setRegistered] = useState(localStorage.getItem("registered") === "1");
+  const [loggedIn, setLoggedIn] = useState(!!getToken());
+  const navigate = useNavigate();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [userName, setUserName] = useState(null);
 
   useEffect(() => {
-    // Listen for changes to registration status (multi-tab support)
-    const onStorage = () => setRegistered(localStorage.getItem("registered") === "1");
+    if (loggedIn) {
+      getProfile().then(profile => {
+        setUserName(profile?.name || "");
+      });
+    } else {
+      setUserName("");
+    }
+  }, [loggedIn]);
+
+  useEffect(() => {
+    const onStorage = () => setLoggedIn(!!localStorage.getItem("token"));
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  useEffect(() => {
+    // If not logged in, redirect to login page
+    if (!localStorage.getItem("token")) {
+      setLoggedIn(false);
+      navigate("/login");
+    }
+  }, []);
+
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setLoggedIn(false);
+    navigate("/"); // Redirect to landing page
+  };
+
+  // Add handlers for SettingsMenu
+  const handleUserInfo = () => navigate("/user-info");
+  const handleSystemOptions = () => navigate("/settings");
+
   return (
     <CollegeProvider>
-    <>
-      <HomeScreenButton />
-      <div className="background-gif">
-        <img src={backgroundGif} alt="background" />
-      </div>
-      <Routes>
-        <Route path="/" element={
-          registered ? (
-            <div className="app">
-              <RevolvingQuotes />
-              <USAMap />
-              <TopCollegesButton />
-              <FloatingNavButtons />
-            </div>
-          ) : (
-            <LandingPage />
-          )
-        } />
-        <Route path="/home" element={
-          <div className="app">
-            <RevolvingQuotes />
-            <USAMap />
-            <FloatingNavButtons />
-            <TopCollegesButton />
-          </div>
-        } />
-        <Route path="/create-account" element={<CreateAccount />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/affinity-calc" element={<ComingSoon emoji="🧮" />} />
-        <Route path="/settings" element={<ComingSoon emoji="⚙️" />} />
-        <Route path="/survey" element={<SurveyPage />} />
-        <Route path="/video" element={<VideoPage />} />
-        <Route path="/assignments" element={<AssignmentsPage />} />
-        <Route path="/top-colleges" element={<TopColleges />} />
-        <Route path="/colleges-list" element={<CollegeList />} />
-      </Routes>
-    </>
+      <>
+        <HomeScreenButton
+          onLogout={handleLogout}
+          loggedIn={loggedIn}
+          onSettings={() => setSettingsOpen(true)}
+        />
+        <div className="background-gif">
+          <img src={backgroundGif} alt="background" />
+        </div>
+        {settingsOpen && (
+          <SettingsMenu
+            onLogout={handleLogout}
+            onClose={() => setSettingsOpen(false)}
+            onEditSurvey={() => navigate("/survey")}
+            onEditAssignments={() => navigate("/assignments")}
+            onOptions={() => {}}
+            onUserInfo={handleUserInfo}
+            onSystemOptions={handleSystemOptions}
+          />
+        )}
+        <Routes>
+          {/* Home route: protected */}
+          <Route path="/" element={
+            loggedIn ? (
+              <div className="app">
+                {userName === null ? null : <RevolvingQuotes userName={userName} />}
+                <USAMap />
+                <TopCollegesButton />
+                <FloatingNavButtons />
+              </div>
+            ) : (
+              <LandingPage />
+            )
+          } />
+          {/* Also allow /home as an alias for home page */}
+          <Route path="/home" element={
+            loggedIn ? (
+              <div className="app">
+                {userName === null ? null : <RevolvingQuotes userName={userName} />}
+                <USAMap />
+                <FloatingNavButtons />
+                <TopCollegesButton />
+              </div>
+            ) : (
+              <LandingPage />
+            )
+          } />
+          {/* Public routes */}
+          <Route path="/create-account" element={<CreateAccount setLoggedIn={setLoggedIn} />} />
+          <Route path="/login" element={<LoginPage setLoggedIn={setLoggedIn} />} />
+          <Route path="/survey" element={<SurveyPage />} />
+          {/* Protected routes */}
+          <Route path="/affinity-calc" element={
+            loggedIn ? <ComingSoon emoji="🧮" /> : <LandingPage />
+          } />
+          <Route path="/settings" element={
+            loggedIn ? <ComingSoon emoji="⚙️" /> : <LandingPage />
+          } />
+          <Route path="/video" element={
+            loggedIn ? <VideoPage /> : <LandingPage />
+          } />
+          <Route path="/assignments" element={
+            loggedIn ? <AssignmentsPage /> : <LandingPage />
+          } />
+          <Route path="/top-colleges" element={
+            loggedIn ? <TopColleges /> : <LandingPage />
+          } />
+          <Route path="/colleges-list" element={
+            loggedIn ? <CollegeList /> : <LandingPage />
+          } />
+          <Route path="/user-info" element={<UserInfoPage />} />
+        </Routes>
+      </>
     </CollegeProvider>
   );
 }

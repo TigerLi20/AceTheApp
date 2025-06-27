@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CreateAccount.css";
+import { register } from "../api"; // <-- Import your API register function
+import { saveSurveyAnswers, getToken } from "../api";
 
-export default function CreateAccount() {
+const LOCAL_STORAGE_KEY = "guestSurveyAnswers";
+
+export default function CreateAccount({ setLoggedIn }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
@@ -12,9 +16,9 @@ export default function CreateAccount() {
   });
   const [error, setError] = useState("");
 
-  // Redirect if already registered
+  // Redirect if already authenticated (e.g., token exists)
   useEffect(() => {
-    if (localStorage.getItem("registered") === "1") {
+    if (localStorage.getItem("token")) {
       navigate("/home", { replace: true });
     }
   }, [navigate]);
@@ -24,7 +28,7 @@ export default function CreateAccount() {
     setError("");
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password || !form.confirm) {
       setError("Please fill out all fields.");
@@ -34,20 +38,60 @@ export default function CreateAccount() {
       setError("Passwords do not match.");
       return;
     }
-    // Save user info (for demo, use localStorage)
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-      })
-    );
-    // Mark as registered
-    localStorage.setItem("registered", "1");
-    localStorage.removeItem("usaMapClickedChain");
-    // Go to home page (map)
-    navigate("/home");
+    try {
+      console.log("[DEBUG] Registration form data:", form);
+      // Call backend API to register
+      let res;
+      try {
+        res = await register({
+          name: form.name,
+          email: form.email,
+          password: form.password
+        });
+      } catch (err) {
+        // Clear any stale token on error
+        localStorage.removeItem("token");
+        // Show backend error message if available
+        if (err && err.message) {
+          setError("Registration failed: " + err.message);
+        } else {
+          setError("Registration failed. Please try again.");
+        }
+        console.error("[DEBUG] Registration error:", err);
+        return;
+      }
+      console.log("[DEBUG] Registration response:", res);
+      if (!res.token) {
+        setError("Registration failed: No token returned from server. Please try again or contact support.");
+        return;
+      }
+      // Save token (or whatever your backend returns)
+      localStorage.setItem("token", res.token);
+      setLoggedIn(true);
+      // --- Sync guest survey answers if they exist ---
+      const guestAnswers = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (guestAnswers) {
+        try {
+          const parsed = JSON.parse(guestAnswers);
+          if (Array.isArray(parsed)) {
+            await saveSurveyAnswers(parsed);
+          }
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+        } catch (err) {
+          // Ignore sync errors, or show a message if you want
+        }
+      }
+      // -----------------------------------------------
+      navigate("/home");
+    } catch (err) {
+      // Show backend error message if available
+      if (err && err.message) {
+        setError("Registration failed: " + err.message);
+      } else {
+        setError("Registration failed. Please try again.");
+      }
+      console.error("[DEBUG] Registration error:", err);
+    }
   };
 
   return (
