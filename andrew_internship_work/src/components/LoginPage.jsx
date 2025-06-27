@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./CreateAccount.css";
-<<<<<<< HEAD
 import { login } from "../api"; // <-- Import your API login function
 import { useCollegeList } from "./CollegeProvider";
 
@@ -12,20 +11,10 @@ export default function LoginPage({ setLoggedIn }) {
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
-=======
-
-export default function LoginPage() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-
-  const handleChange = e => {
->>>>>>> main
     setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
   };
 
-<<<<<<< HEAD
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -38,47 +27,28 @@ export default function LoginPage() {
     } catch (err) {
       setError(err.message || "Invalid email or password.");
     }
-=======
-  const handleSubmit = e => {
-    e.preventDefault();
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (
-      !user ||
-      user.email !== form.email ||
-      user.password !== form.password
-    ) {
-      setError("Invalid email or password.");
-      return;
-    }
-    localStorage.setItem("registered", "1");
-    navigate("/home");
->>>>>>> main
   };
 
   return (
-    <div className="create-account-outer">
-      <form className="create-account-box" onSubmit={handleSubmit}>
-        <h2>Log In</h2>
+    <div className="login-root">
+      <form className="login-form" onSubmit={handleSubmit}>
+        <h2>Login</h2>
         <input
-          name="email"
           type="email"
+          name="email"
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
-          autoComplete="email"
         />
         <input
-          name="password"
           type="password"
+          name="password"
           placeholder="Password"
           value={form.password}
           onChange={handleChange}
-          autoComplete="current-password"
         />
-        {error && <div className="create-account-error">{error}</div>}
-        <button type="submit" className="create-account-btn">
-          Log In
-        </button>
+        {error && <div className="error-message">{error}</div>}
+        <button type="submit">Login</button>
       </form>
     </div>
   );

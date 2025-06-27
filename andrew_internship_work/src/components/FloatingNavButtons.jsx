@@ -1,9 +1,5 @@
 import React, { useState } from "react";
-<<<<<<< HEAD
-import { useNavigate } from "react-router-dom";
-=======
 import { useNavigate, useLocation } from "react-router-dom";
->>>>>>> main
 import "./FloatingNavButtons.css";
 import bookIcon from "../assets/book.svg";
 import gavelIcon from "../assets/gavel.webp";
@@ -11,15 +7,12 @@ import calculatorIcon from "../assets/calculator.png";
 import settingsIcon from "../assets/settings.png";
 import SettingsMenu from "./SettingsMenu";
 import EditApplicationsPopup from "./EditApplicationsPopup";
-<<<<<<< HEAD
 import { setToken } from "../api"; // <-- Import setToken to clear token on logout
 import { getSurveyAnswers } from "../api"; // Add this import
 
-=======
->>>>>>> main
-
 export default function FloatingNavButtons() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -30,7 +23,6 @@ export default function FloatingNavButtons() {
     navigate("/settings");
   };
 
-<<<<<<< HEAD
   const handleEditSurvey = async () => {
     setShowSettings(false);
     try {
@@ -41,14 +33,6 @@ export default function FloatingNavButtons() {
         navigate("/survey");
       }
     } catch (e) {
-=======
-  const handleEditSurvey = () => {
-    setShowSettings(false);
-    const answers = JSON.parse(localStorage.getItem("surveyAnswers"));
-    if (Array.isArray(answers) && answers.length === 10 && answers.every(a => a !== null)) {
-      navigate("/survey?recap=1");
-    } else {
->>>>>>> main
       navigate("/survey");
     }
   };
@@ -59,55 +43,54 @@ export default function FloatingNavButtons() {
   };
 
   const handleLogout = () => {
-    setShowSettings(false);
-<<<<<<< HEAD
-    setToken(null); // Remove token from localStorage and memory
-=======
-    localStorage.removeItem("registered");
->>>>>>> main
-    window.location.href = "/";
-  };
-
-  const handleEditApplications = () => {
-    setShowSettings(false);
-    setShowPopup(true);
+    setToken("");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/");
   };
 
   return (
-    <>
-      <div className="floating-nav-buttons">
-        <button title="Colleges List" onClick={() => navigate('/colleges-list')}>
-          <img src={bookIcon} alt="Colleges List" width={24} height={24} />
-        </button>
-        <button
-          title="Edit Applications"
-          onClick={handleEditApplications}
-        >
-          <img src={gavelIcon} alt="Edit Applications" width={24} height={24} />
-        </button>
-        <button title="Affinity Calculator" onClick={() => navigate('/affinity-calc')}>
-          <img src={calculatorIcon} alt="Affinity Calculator" width={24} height={24} />
-        </button>
-      </div>
-      <div className="settings-nav-button">
-        <button title="Settings" onClick={handleSettingsClick}>
-          <img src={settingsIcon} alt="Settings" width={24} height={24} />
-        </button>
-      </div>
+    <div className="floating-nav-buttons">
+      <button
+        className="floating-btn"
+        title="Assignments"
+        onClick={() => setShowPopup(true)}
+      >
+        <img src={bookIcon} alt="Assignments" width={32} height={32} />
+      </button>
+      <button
+        className="floating-btn"
+        title="Legal"
+        onClick={() => navigate("/legal")}
+      >
+        <img src={gavelIcon} alt="Legal" width={32} height={32} />
+      </button>
+      <button
+        className="floating-btn"
+        title="Calculator"
+        onClick={() => navigate("/calculator")}
+      >
+        <img src={calculatorIcon} alt="Calculator" width={32} height={32} />
+      </button>
+      <button
+        className="floating-btn"
+        title="Settings"
+        onClick={handleSettingsClick}
+      >
+        <img src={settingsIcon} alt="Settings" width={32} height={32} />
+      </button>
       {showSettings && (
         <SettingsMenu
           onClose={() => setShowSettings(false)}
           onOptions={handleOptions}
           onEditSurvey={handleEditSurvey}
-          onLogout={handleLogout}
           onEditAssignments={handleEditAssignments}
+          onLogout={handleLogout}
         />
       )}
       {showPopup && (
-        <EditApplicationsPopup
-          onClose={() => setShowPopup(false)}
-        />
+        <EditApplicationsPopup onClose={() => setShowPopup(false)} />
       )}
-    </>
+    </div>
   );
 }
