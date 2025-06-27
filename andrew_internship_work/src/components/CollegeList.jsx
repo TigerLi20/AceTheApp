@@ -4,6 +4,7 @@ import { Card, CardContent, Typography, Dialog, DialogTitle, DialogContent, Dial
 import { useCollegeList } from "./CollegeProvider";
 import defaultCollegePic from '../assets/collegepictures/default.jpg';
 import trashIcon from '../assets/trash.png';
+import { getCollegeProgress, saveCollegeProgress } from '../api';
 
 const collegeImageModules = import.meta.glob('../assets/collegepictures/*.jpeg', { eager: true });
 const collegeImages = {};
@@ -880,12 +881,13 @@ function getRandomProgress() {
   return 64;
 }
 
-export default function CollegeList() {
-  const { myColleges, removeCollege } = useCollegeList();
+export default function CollegeList(props) {
+  const { myColleges, addCollege, removeCollege } = useCollegeList();
   const [selected, setSelected] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dropdownOpenId, setDropdownOpenId] = useState(null);
-  const [taskStates, setTaskStates] = useState({}); // { collegeId: { questions: true, ... } }
+  const [progressMap, setProgressMap] = useState({}); // { [collegeId]: { ...progressObj } }
+  const [loadingProgress, setLoadingProgress] = useState(true);
   const dropdownRef = useRef(null);
 
   const collegesWithProgress = myColleges.map((c) => ({
@@ -921,27 +923,42 @@ export default function CollegeList() {
   const selectedColleges = collegesWithProgress.filter((c) => selected.includes(c.id));
   const selectedNames = selectedColleges.map((c) => c.name).join(", ");
 
-  // Initialize task states for new colleges
+  // Fetch progress from API on mount
   useEffect(() => {
-    setTaskStates((prev) => {
-      const updated = { ...prev };
-      collegesWithProgress.forEach((c) => {
-        if (!updated[c.id]) {
-          updated[c.id] = {
-            questions: false,
-            writing: false,
-            recommenders: false,
-            review: false,
-          };
-        }
-      });
-      return updated;
-    });
-  }, [myColleges]);
+    async function fetchProgress() {
+      try {
+        const data = await getCollegeProgress(); // { [collegeId]: { ...progressObj } }
+        console.log('[DEBUG] Progress fetched from API:', data);
+        setProgressMap(data || {});
+      } catch (e) {
+        // Optionally handle error
+      } finally {
+        setLoadingProgress(false);
+      }
+    }
+    fetchProgress();
+  }, []);
 
-  // Calculate progress based on checked tasks
+  // Handle checkbox change and persist to backend
+  const handleProgressChange = async (collegeId, key) => {
+    const prev = progressMap[collegeId] || {};
+    const updated = { ...prev, [key]: !prev[key] };
+    const newMap = { ...progressMap, [collegeId]: updated };
+    setProgressMap(newMap);
+    console.log('[DEBUG] Saving progress for', collegeId, updated);
+    try {
+      // Save only the progress for this college, not the whole map
+      const resp = await saveCollegeProgress(collegeId, updated);
+      console.log('[DEBUG] API save response:', resp);
+    } catch (e) {
+      // Optionally handle error, revert UI if needed
+      console.error('[DEBUG] Error saving progress:', e);
+    }
+  };
+
+  // Calculate progress based on checked tasks in progressMap
   function getProgress(college) {
-    const tasks = taskStates[college.id] || {};
+    const tasks = progressMap[college.id] || {};
     let progress = 0;
     TASKS.forEach((t) => {
       if (tasks[t.key]) progress += t.weight;
@@ -952,17 +969,6 @@ export default function CollegeList() {
   // Handle double click to toggle dropdown
   const handleCardDoubleClick = (collegeId) => {
     setDropdownOpenId((prev) => (prev === collegeId ? null : collegeId));
-  };
-
-  // Handle task checkbox change
-  const handleTaskChange = (collegeId, key) => {
-    setTaskStates((prev) => ({
-      ...prev,
-      [collegeId]: {
-        ...prev[collegeId],
-        [key]: !prev[collegeId][key],
-      },
-    }));
   };
 
   // Close dropdown on outside click
@@ -1054,8 +1060,8 @@ export default function CollegeList() {
                         <li key={task.key} style={{ marginBottom: 8, display: "flex", alignItems: "center" }}>
                           <input
                             type="checkbox"
-                            checked={taskStates[college.id]?.[task.key] || false}
-                            onChange={() => handleTaskChange(college.id, task.key)}
+                            checked={progressMap[college.id]?.[task.key] || false}
+                            onChange={() => handleProgressChange(college.id, task.key)}
                             id={`task-${college.id}-${task.key}`}
                           />
                           <label htmlFor={`task-${college.id}-${task.key}`} style={{ marginLeft: 8 }}>
